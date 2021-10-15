@@ -1,0 +1,105 @@
+---
+title: "Stats 369 - Lab 9"
+author: "Xinge Tu - xtu424"
+date: "05/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+library(tidyverse)
+library(reticulate)
+use_condaenv("r369")
+library(keras)
+library(tensorflow)
+```
+
+### Data in
+
+Using the data on optimising linear algebra from Lab 3 ,with the same subsetting as in Lab 3.
+
+```{r}
+data = read_csv("sgemm_product.csv")
+
+set.seed(416312421)
+index <- sample(241600, 500)
+all = data[index,]
+
+data = all[,c(-18,-17,-16)] %>% mutate(labels = log(`Run1 (ms)`))
+data = data[,-15]
+test = sample(500, 100)
+
+ 
+train_data = data[-test,]
+train_label = train_data$labels
+test_data = data[test,]
+test_label = test_data$labels
+
+m = apply(train_data[,-15],2,mean)
+st = apply(train_data[,-15],2,sd)
+
+train_data = scale(train_data[,-15], center = m, scale = st)
+test_data = scale(test_data[,-15], center = m, scale = st)
+```
+
+## Q1
+
+1) Fit a network with one hidden layer, 8 nodes, ReLU activation, and squared error loss to predict the log times from Run 1. 
+
+In particular, note that the predictors need to be in a matrix, not a data frame.
+
+### Model Fit
+```{r}
+set.seed(416312421)
+model <- keras_model_sequential()
+model %>%  
+  layer_dense(units = 8, activation = 'relu', input_shape = c(14)) %>%
+  layer_dense(units = 1)
+model %>% compile(optimizer = "rmsprop", loss = "mae")
+
+summary(model)
+```
+
+### Train Model and Predict
+```{r}
+set.seed(416312421)
+h = model %>% fit(train_data, train_label,epochs = 200, verbose = 0)
+plot(h)
+set.seed(416312421)
+result = model %>% evaluate(test_data,test_label,verbose = 0)
+result
+```
+
+#### Compare to the results from Lab 3
+The result in Lab 3 is around 0.02, is slightly performance better than NNE.
+
+## Q2
+
+2) Add a second hidden layer after the first with 4 nodes and repeat part 
+
+```{r}
+set.seed(416312421)
+model2 <- keras_model_sequential()
+model2 %>%  
+  layer_dense(units = 8, activation = 'relu', input_shape = c(14)) %>%
+  layer_dense(units = 4, activation = 'relu') %>%
+  layer_dense(units = 1)
+
+model2 %>% compile(optimizer = "rmsprop", loss = "mae")
+
+h2 = model2 %>% fit(train_data, train_label,epochs = 200, verbose = 0)
+plot(h2)
+
+result2 = model2 %>% evaluate(test_data,test_label,verbose = 0)
+result2
+
+
+
+```
+
+
+If you cannot get keras installed and continue with the lab, note down what steps have you done; what problems you have encountered and actions taken to (try to) address it. Sometimes, finding out a problem is also a valuable learning itself.
+
+
+
+
